@@ -44,10 +44,25 @@ pub async fn subscribe(
     if insert_subscriber(&pool, &new_subscriber).await.is_err() {
         return HttpResponse::InternalServerError().finish();
     }
+    if send_confirmation_email(&email_client, new_subscriber)
+        .await
+        .is_err()
+    {
+        return HttpResponse::InternalServerError().finish();
+    }
+    HttpResponse::Ok().finish()
+}
 
+#[tracing::instrument(
+    name = "Send a confirmation emial to a nwa subscriber",
+    skip(email_client, new_subscriber)
+)]
+pub async fn send_confirmation_email(
+    email_client: &EmailClient,
+    new_subscriber: NewSubscriber,
+) -> Result<(), reqwest::Error> {
     let confirmation_link = "https://there-is-no-domain.com/subscriptions/confirm";
-
-    if email_client
+    email_client
         .send_email(
             new_subscriber.email,
             "Welcome!",
@@ -63,11 +78,6 @@ pub async fn subscribe(
             ),
         )
         .await
-        .is_err()
-    {
-        return HttpResponse::InternalServerError().finish();
-    }
-    HttpResponse::Ok().finish()
 }
 
 #[tracing::instrument(
