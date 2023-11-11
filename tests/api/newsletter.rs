@@ -89,7 +89,7 @@ async fn requests_missing_authorization_are_rejected() {
         .post(&format!("{}/newsletters", &app.address))
         .json(&serde_json::json!({
             "title": "Newsletter title",
-            "Content": {
+            "content": {
             "text": "Newsletter body as plain text",
             "html": "<p>Newsletter body as HTML</p>",
         }
