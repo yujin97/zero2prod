@@ -47,10 +47,19 @@ impl std::fmt::Debug for PublishError {
 }
 
 impl ResponseError for PublishError {
-    fn status_code(&self) -> StatusCode {
+    fn error_response(&self) -> HttpResponse {
         match self {
-            PublishError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            PublishError::AuthError(_) => StatusCode::UNAUTHORIZED,
+            PublishError::UnexpectedError(_) => {
+                HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+            PublishError::AuthError(_) => {
+                let mut response = HttpResponse::new(StatusCode::UNAUTHORIZED);
+                let header_value = HeaderValue::from_str(r#"Basic realm="publish""#).unwrap();
+                response
+                    .headers_mut()
+                    .insert(header::WWW_AUTHENTICATE, header_value);
+                response
+            }
         }
     }
 }
@@ -119,7 +128,7 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
         .to_str()
         .context("The 'Authorization' header was not a valid UTF8 string. ")?;
     let base64encoded_segment = header_value
-        .strip_prefix("Basic")
+        .strip_prefix("Basic ")
         .context("The authorization scheme was not 'Basic'.")?;
     let decoded_bytes = base64::engine::general_purpose::STANDARD
         .decode(base64encoded_segment)
