@@ -3,7 +3,7 @@ use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
-async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() {
+async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
     let app = spawn_app().await;
     create_unconfirmed_subscriber(&app).await;
 
@@ -26,7 +26,7 @@ async fn newsletter_are_not_delivered_to_unconfirmed_subscribers() {
 }
 
 #[tokio::test]
-async fn newsletter_are_delivered_to_confirmed_subscribers() {
+async fn newsletters_are_delivered_to_confirmed_subscribers() {
     let app = spawn_app().await;
     create_confirmed_subscriber(&app).await;
 
