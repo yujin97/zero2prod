@@ -79,3 +79,31 @@ async fn current_password_must_be_valid() {
     let html_page = app.get_change_password_html().await;
     assert!(html_page.contains("<p><i>The current password is incorrect.</i></p>"));
 }
+
+#[tokio::test]
+async fn current_password_must_not_be_too_short() {
+    let app = spawn_app().await;
+    let new_password = "short";
+
+    app.post_login(&serde_json::json!({
+        "username": &app.test_user.username,
+        "password": &app.test_user.password,
+    }))
+    .await;
+
+    let response = app
+        .post_change_password(&serde_json::json!({
+            "current_password": &app.test_user.password,
+            "new_password": &new_password,
+            "new_password_check": &new_password
+        }))
+        .await;
+
+    assert_is_redirect_to(&response, "/admin/password");
+
+    let html_page = app.get_change_password_html().await;
+    assert!(html_page.contains(
+        "<p><i>The new password is too short - \
+        the password should be longer than 12 characters.</i></p>"
+    ));
+}
