@@ -1,4 +1,4 @@
-use crate::helpers::{spawn_app, ConfirmationLinks, TestApp};
+use crate::helpers::{assert_is_redirect_to, spawn_app, ConfirmationLinks, TestApp};
 use uuid::Uuid;
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
@@ -6,6 +6,13 @@ use wiremock::{Mock, ResponseTemplate};
 #[tokio::test]
 async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
     let app = spawn_app().await;
+
+    app.post_login(&serde_json::json!({
+        "username": &app.test_user.username,
+        "password": &app.test_user.password
+    }))
+    .await;
+
     create_unconfirmed_subscriber(&app).await;
 
     Mock::given(any())
@@ -46,6 +53,12 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
     }
     });
 
+    app.post_login(&serde_json::json!({
+        "username": &app.test_user.username,
+        "password": &app.test_user.password
+    }))
+    .await;
+
     let response = app.post_newsletters(newsletter_request_body).await;
     assert_eq!(response.status().as_u16(), 200);
 }
@@ -71,6 +84,12 @@ async fn newsletter_returns_400_for_invalid_data() {
         ),
     ];
 
+    app.post_login(&serde_json::json!({
+        "username": &app.test_user.username,
+        "password": &app.test_user.password
+    }))
+    .await;
+
     for (invalid_body, error_message) in test_cases {
         let response = app.post_newsletters(invalid_body).await;
         assert_eq!(
@@ -86,8 +105,9 @@ async fn newsletter_returns_400_for_invalid_data() {
 async fn requests_missing_authorization_are_rejected() {
     let app = spawn_app().await;
 
-    let response = reqwest::Client::new()
-        .post(&format!("{}/newsletters", &app.address))
+    let response = app
+        .api_client
+        .post(&format!("{}/admin/newsletters", &app.address))
         .json(&serde_json::json!({
             "title": "Newsletter title",
             "content": {
@@ -99,22 +119,16 @@ async fn requests_missing_authorization_are_rejected() {
         .await
         .expect("Failed to execute request.");
 
-    assert_eq!(401, response.status().as_u16());
-    assert_eq!(
-        r#"Basic realm="publish""#,
-        response.headers()["WWW-Authenticate"]
-    );
+    assert_is_redirect_to(&response, "/login")
 }
 
 #[tokio::test]
 async fn non_existing_user_is_rejected() {
     let app = spawn_app().await;
-    let username = Uuid::new_v4().to_string();
-    let password = Uuid::new_v4().to_string();
 
-    let response = reqwest::Client::new()
-        .post(&format!("{}/newsletters", &app.address))
-        .basic_auth(username, Some(password))
+    let response = app
+        .api_client
+        .post(&format!("{}/admin/newsletters", &app.address))
         .json(&serde_json::json!({
             "title": "Newsletter title",
             "content": {
@@ -126,11 +140,7 @@ async fn non_existing_user_is_rejected() {
         .await
         .expect("Failed to execute request.");
 
-    assert_eq!(401, response.status().as_u16());
-    assert_eq!(
-        r#"Basic realm="publish""#,
-        response.headers()["WWW-Authenticate"]
-    );
+    assert_is_redirect_to(&response, "/login")
 }
 
 #[tokio::test]
@@ -140,8 +150,9 @@ async fn invalid_password_is_rejected() {
     let password = Uuid::new_v4().to_string();
     assert_ne!(app.test_user.password, password);
 
-    let response = reqwest::Client::new()
-        .post(&format!("{}/newsletters", &app.address))
+    let response = app
+        .api_client
+        .post(&format!("{}/admin/newsletters", &app.address))
         .basic_auth(username, Some(password))
         .json(&serde_json::json!({
                 "title": "Newsltter title",
@@ -154,11 +165,7 @@ async fn invalid_password_is_rejected() {
         .await
         .expect("Failed to execute request.");
 
-    assert_eq!(401, response.status().as_u16());
-    assert_eq!(
-        r#"Basic realm="publish""#,
-        response.headers()["WWW-Authenticate"]
-    );
+    assert_is_redirect_to(&response, "/login")
 }
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
