@@ -3,7 +3,7 @@ use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::routes::error_chain_fmt;
-use actix_web::http::header::HeaderValue;
+use actix_web::http::header::{ContentType, HeaderValue};
 use actix_web::http::{header, StatusCode};
 use actix_web::web;
 use actix_web::{HttpResponse, ResponseError};
@@ -59,6 +59,39 @@ impl ResponseError for PublishError {
             }
         }
     }
+}
+
+pub async fn newsletter_dashboard() -> HttpResponse {
+    HttpResponse::Ok().content_type(ContentType::html()).body(
+        r#"<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta http-equiv="content-type" content="text/html"; charset=utf-8>
+                <title>Newsletter dashboard</title>
+            </head>
+            <body>
+                <form action="/admin/newsletters" method="post">
+                     <label>Title
+                        <input
+                            type="text"
+                            placeholder="Title"
+                            name="title"
+                        >
+                    </label>
+                    <label>Content
+                        <textarea
+                            placeholder="Write your content"
+                            name="content"
+                            rows="4"
+                            cols="50"
+                        >
+                        </textarea>
+                    </label>
+                    <button type="submit">Publish</button>
+                </form>
+            </body>
+        </html>"#,
+    )
 }
 
 #[tracing::instrument(
