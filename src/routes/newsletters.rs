@@ -14,7 +14,7 @@ use secrecy::Secret;
 use sqlx::PgPool;
 
 #[derive(serde::Deserialize)]
-pub struct BodyData {
+pub struct NewsLetterFormData {
     title: String,
     content: Content,
 }
@@ -96,11 +96,11 @@ pub async fn newsletter_dashboard() -> HttpResponse {
 
 #[tracing::instrument(
     name = "Publish a newsletter issue",
-    skip(body, pool, email_client),
+    skip(form, pool, email_client),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn publish_newsletter(
-    body: web::Json<BodyData>,
+    form: web::Form<NewsLetterFormData>,
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
     user_id: web::ReqData<UserId>,
@@ -114,9 +114,9 @@ pub async fn publish_newsletter(
                 email_client
                     .send_email(
                         &subscriber.email,
-                        &body.title,
-                        &body.content.html,
-                        &body.content.text,
+                        &form.0.title,
+                        &form.0.content.html,
+                        &form.0.content.text,
                     )
                     .await
                     .with_context(|| {
