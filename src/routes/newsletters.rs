@@ -16,13 +16,8 @@ use sqlx::PgPool;
 #[derive(serde::Deserialize)]
 pub struct NewsLetterFormData {
     title: String,
-    content: Content,
-}
-
-#[derive(serde::Deserialize)]
-pub struct Content {
-    html: String,
-    text: String,
+    text_content: String,
+    html_content: String,
 }
 
 struct ConfirmedSubscriber {
@@ -115,8 +110,8 @@ pub async fn publish_newsletter(
                     .send_email(
                         &subscriber.email,
                         &form.0.title,
-                        &form.0.content.html,
-                        &form.0.content.text,
+                        &form.0.html_content,
+                        &form.0.text_content,
                     )
                     .await
                     .with_context(|| {

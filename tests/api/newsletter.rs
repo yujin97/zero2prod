@@ -23,10 +23,8 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
 
     let newsletter_request_body = serde_json::json!({
         "title": "Newsletter title",
-        "content": {
-        "text": "Newsletter body as plain text",
-        "html": "<p>Newsletter body as HTML</p>",
-    }
+        "text_content": "Newsletter body as plain text",
+        "html_content": "<p>Newsletter body as HTML</p>",
     });
 
     let response = app.post_newsletters(&newsletter_request_body).await;
@@ -47,10 +45,8 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
 
     let newsletter_request_body = serde_json::json!({
         "title": "Newsletter title",
-        "content": {
-        "text": "Newsletter body as plain text",
-        "html": "<p>Newsletter body as HTML</p>"
-    }
+        "text_content": "Newsletter body as plain text",
+        "html_content": "<p>Newsletter body as HTML</p>"
     });
 
     app.post_login(&serde_json::json!({
@@ -69,11 +65,9 @@ async fn newsletter_returns_400_for_invalid_data() {
     let test_cases = vec![
         (
             serde_json::json!(
-            {
-                "content": {
-                    "text": "Newsletter body as plain text",
-                    "html": "<p>Newsletter body as HTML</p>"
-                }
+                {
+                    "text_content": "Newsletter body as plain text",
+                    "html_content": "<p>Newsletter body as HTML</p>"
                 }
             ),
             "missing title",
@@ -110,10 +104,8 @@ async fn requests_missing_authorization_are_rejected() {
         .post(&format!("{}/admin/newsletters", &app.address))
         .json(&serde_json::json!({
             "title": "Newsletter title",
-            "content": {
-            "text": "Newsletter body as plain text",
-            "html": "<p>Newsletter body as HTML</p>",
-        }
+            "text_content": "Newsletter body as plain text",
+            "html_content": "<p>Newsletter body as HTML</p>",
         }))
         .send()
         .await
@@ -131,10 +123,8 @@ async fn non_existing_user_is_rejected() {
         .post(&format!("{}/admin/newsletters", &app.address))
         .json(&serde_json::json!({
             "title": "Newsletter title",
-            "content": {
-            "text": "Newsletter body as plain text",
-            "html": "<p>Newsletter body as HTML</p>",
-        }
+            "text_content": "Newsletter body as plain text",
+            "html_content": "<p>Newsletter body as HTML</p>",
         }))
         .send()
         .await
@@ -156,10 +146,8 @@ async fn invalid_password_is_rejected() {
         .basic_auth(username, Some(password))
         .json(&serde_json::json!({
                 "title": "Newsltter title",
-                "content": {
-                "text": "Newsletter body as plain text",
-                "html": "<p>Newsletter body as HTML</p>"
-            }
+                "text_content": "Newsletter body as plain text",
+                "html_content": "<p>Newsletter body as HTML</p>"
         }))
         .send()
         .await
