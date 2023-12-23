@@ -31,7 +31,7 @@ pub async fn publish_newsletter_form(flash_messages: IncomingFlashMessages) -> H
                     <label>Plain text content:<br>
                         <textarea
                             placeholder="Enter the content in plain text"
-                            name="text content"
+                            name="text_content"
                             rows="20"
                             cols="50"
                         ></textarea>
