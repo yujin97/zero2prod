@@ -1,6 +1,8 @@
 use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
+use crate::idempotency::IdempotencyKey;
+use crate::utils::e400;
 use crate::utils::e500;
 use crate::utils::see_other;
 use actix_web::web;
@@ -14,6 +16,7 @@ pub struct FormData {
     title: String,
     text_content: String,
     html_content: String,
+    idempotency_key: String,
 }
 
 struct ConfirmedSubscriber {
@@ -31,6 +34,13 @@ pub async fn publish_newsletter(
     email_client: web::Data<EmailClient>,
     user_id: web::ReqData<UserId>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let FormData {
+        title,
+        text_content,
+        html_content,
+        idempotency_key,
+    } = form.0;
+    let idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(e400)?;
     let user_id = user_id.into_inner();
     tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
     let subscribers = get_confirmed_subscribers(&pool).await.map_err(e500)?;
@@ -38,12 +48,7 @@ pub async fn publish_newsletter(
         match subscriber {
             Ok(subscriber) => {
                 email_client
-                    .send_email(
-                        &subscriber.email,
-                        &form.0.title,
-                        &form.0.html_content,
-                        &form.0.text_content,
-                    )
+                    .send_email(&subscriber.email, &title, &html_content, &text_content)
                     .await
                     .with_context(|| {
                         format!("Failed to send newsletter issue to {}", subscriber.email)
