@@ -1,8 +1,8 @@
 use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
-use crate::idempotency::get_saved_response;
 use crate::idempotency::IdempotencyKey;
+use crate::idempotency::{get_saved_response, save_response};
 use crate::utils::e400;
 use crate::utils::e500;
 use crate::utils::see_other;
@@ -10,7 +10,6 @@ use actix_web::web;
 use actix_web::HttpResponse;
 use actix_web_flash_messages::FlashMessage;
 use anyhow::Context;
-use sqlx::pool;
 use sqlx::PgPool;
 
 #[derive(serde::Deserialize)]
@@ -48,7 +47,7 @@ pub async fn publish_newsletter(
         .await
         .map_err(e500)?
     {
-        let _ = FlashMessage::info("The newsletter issue has been published!");
+        FlashMessage::info("The newsletter issue has been published!").send();
         return Ok(saved_response);
     }
     tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
@@ -74,7 +73,11 @@ pub async fn publish_newsletter(
         }
     }
     FlashMessage::info("The newsletter issue has been published!").send();
-    Ok(see_other("/admin/newsletters"))
+    let response = see_other("/admin/newsletters");
+    let response = save_response(&pool, &idempotency_key, *user_id, response)
+        .await
+        .map_err(e500)?;
+    Ok(response)
 }
 
 #[tracing::instrument(name = "Get confirmed subscribers", skip(pool))]
