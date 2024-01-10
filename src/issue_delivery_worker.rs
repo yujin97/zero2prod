@@ -6,7 +6,7 @@ use std::time::Duration;
 use tracing::{field::display, Span};
 use uuid::Uuid;
 
-enum ExecuteOutcome {
+pub enum ExecuteOutcome {
     TaskCompleted,
     EmptyQueue,
 }
@@ -19,7 +19,7 @@ enum ExecuteOutcome {
     ),
     err
 )]
-async fn try_execute_task(
+pub async fn try_execute_task(
     pool: &PgPool,
     email_client: &EmailClient,
 ) -> Result<ExecuteOutcome, anyhow::Error> {
@@ -153,17 +153,7 @@ async fn worker_loop(pool: PgPool, email_client: EmailClient) -> Result<(), anyh
 
 pub async fn run_worker_until_stopped(configuration: Settings) -> Result<(), anyhow::Error> {
     let connection_pool = get_connection_pool(&configuration.database);
+    let email_client = configuration.email_client.client();
 
-    let sender_email = configuration
-        .email_client
-        .sender()
-        .expect("Invalid sender email address.");
-    let timeout = configuration.email_client.timeout();
-    let email_client = EmailClient::new(
-        configuration.email_client.base_url,
-        sender_email,
-        configuration.email_client.authorization_token,
-        timeout,
-    );
     worker_loop(connection_pool, email_client).await
 }
